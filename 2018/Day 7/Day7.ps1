@@ -75,3 +75,75 @@ while ($completed -eq $false)
 $order
 
 $stepList = Get-stepList
+
+$order = ""
+$totalTime = 0
+$completed = $false
+$workers = 1..5 | ForEach-Object { [PSCustomObject]@{
+        Task = ''
+        Busy = $false
+        Time = 0
+    }
+}
+
+# loop until all steps are completed
+while (($stepList.Completed | Where-Object { $_ -eq $false }).Count -gt 0)
+{
+    # get all steps without current requirements that are not yet completed
+    $availableSteps = $stepList | Where-Object { $_.Requirements.Count -eq 0 -and $_.Completed -eq $false } | Sort-Object Step
+    "AvailableSteps: " + ($availableSteps.Step -join ', ')
+
+    for ($i = 0; $i -lt @($availableSteps).Count; $i++)
+    {
+        for ($j = 0; $j -lt 5; $j++)
+        {
+            if ($workers[$j].Busy)
+            {
+                continue
+            }
+            elseif ($workers.Task -notcontains $availableSteps[$i].Step)
+            {
+                $workers[$j].Busy = $true
+                $workers[$j].Task = $availableSteps[$i].Step
+                $workers[$j].Time = [int]([char]($workers[$j].Task))-4
+                break
+            }
+            else
+            {
+                break
+            }
+        }
+    }
+
+    # while all workers are busy or there are no tasks available
+    while ((($workers | Where-Object { $_.Busy -eq $false }).Count -eq 0) -or (($availableSteps | Where-Object { $workers.Task -notcontains $_.Step }).Count -eq 0))
+    {
+        $totalTime++
+        for ($i = 0; $i -lt $workers.Count; $i++)
+        {
+            if ($workers[$i].Busy)
+            {
+                $workers[$i].Time--
+                # if the worker is done, complete step
+                if ($workers[$i].Time -eq 0)
+                {
+                    # remove requirement of step from other steps
+                    $stepList | Where-Object { $_.Requirements -contains $workers[$i].Task } | ForEach-Object { $_.Requirements.Remove($workers[$i].Task) }
+
+                    # set step to complete
+                    $stepIndex = $stepList.Step.IndexOf($workers[$i].Task)
+                    $stepList[$stepIndex].Completed = $true
+                    
+                    # add to order and set worker free
+                    $order += $workers[$i].Task
+                    $workers[$i].Task = ''
+                    $workers[$i].Busy = $false
+                }
+            }
+        }
+    }
+}
+
+# part 2
+$totalTime # - 1014 
+$order
