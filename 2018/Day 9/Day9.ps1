@@ -1,40 +1,4 @@
-function Get-MarbleIndex
-{
-    param (
-        [int]$CurrentIndex,
-        [int]$MarbleCount,
-        [int]$MarbleOffset
-    )
-    return (($CurrentIndex + $MarbleOffset + 1) % $MarbleCount + $MarbleCount) % $MarbleCount
-    <#if (($CurrentIndex + $MarbleOffset) -gt $MarbleCount)
-    {
-        return (($CurrentIndex + $MarbleOffset) - $MarbleCount)
-    }
-    else
-    {
-        $reduction = (($CurrentIndex + $MarbleOffset) - $MarbleCount)
-        return $MarbleCount - $reduction
-    }#>
-
-    if (($CurrentIndex + $MarbleOffset) -ge 0)
-    {
-        return (($CurrentIndex + $MarbleOffset + 1) % $MarbleCount + $MarbleCount) % $MarbleCount
-    }
-    else
-    {
-        $tempIndex = $CurrentIndex
-        while ($true)
-        {
-            if ($tempIndex -lt 0)
-            {
-
-            }
-        }
-        return [Math]::Abs(($CurrentIndex + $MarbleOffset) % $MarbleCount)
-    }
-}
-
-#$rawInput = Get-Content "$PSScriptRoot\input.txt"
+$rawInput = Get-Content "$PSScriptRoot\input.txt"
 
 [void]($rawInput -match "(?<players>[0-9]*) players; last marble is worth (?<points>[0-9]*) points")
 # create list of players
@@ -48,11 +12,12 @@ $players = 1..([int]$Matches['players']) | ForEach-Object {
 $points = $Matches['points']
 
 # set first marble
-$marbles = New-Object System.Collections.ArrayList
+$marbles = New-Object System.Collections.Generic.LinkedList[PSCustomObject]
 $marbleValue = 0
-[void]$marbles.Add($marbleValue)
-$marbleIndex = 0
+$currentMarble = $marbles.AddLast($marbleValue)
 
+$lastMarble = 0
+$highScorePart1 = 0
 $gameRunning = $true
 while ($gameRunning)
 {
@@ -63,32 +28,52 @@ while ($gameRunning)
         # if the marble value is a multiple of 23
         if (($marbleValue % 23) -eq 0)
         {
-            # get index of the one 7 steps counter-clockwise, needs -1 to get correct index
-            #"index $marbleIndex from list with $($marbles.Count) marbles, offset is 1 clockwise"
-            $marbleIndex = Get-MarbleIndex -MarbleCount $marbles.Count -MarbleOffset (-7-1) -CurrentIndex $marbleIndex
-
-            $scoreIncrease = ($marbles[$marbleIndex] + $marbleValue)
-            $players[$i].Score += $scoreIncrease
-
-            $marbles.RemoveAt($marbleIndex)
-        }
-        else
-        {
-            # get index of the one 1 step clockwise
-            $marbleIndex = Get-MarbleIndex -MarbleCount $marbles.Count -MarbleOffset 1 -CurrentIndex $marbleIndex
-
-            # if the index is the same as count, it means it will end up at the last position of the list
-            if ($marbleIndex -eq $marbles.Count)
+            for ($j = 0; $j -lt 6; $j++)
             {
-                [void]$marbles.Add($marbleValue)
+                if ($currentMarble -eq $marbles.First)
+                {
+                    $currentMarble = $marbles.Last
+                }
+                else
+                {
+                    $currentMarble = $currentMarble.Previous
+                }
+            }
+
+            if ($currentMarble -eq $marbles.First)
+            {
+                $scoreIncrease = $marbles.Last.Value + $marbleValue
+                [void]$marbles.RemoveLast()
             }
             else
             {
-                [void]$marbles.Insert($marbleIndex, $marbleValue)
+                $scoreIncrease = $currentMarble.Previous.Value + $marbleValue
+
+                $marbleToRemove = $currentMarble.Previous
+                [void]$marbles.Remove($marbleToRemove)
+            }
+
+            $players[$i].Score += $scoreIncrease
+        }
+        else
+        {
+            if ($currentMarble -eq $marbles.Last)
+            {
+                $currentMarble = $marbles.AddAfter($marbles.First, $marbleValue)
+            }
+            else
+            {
+                $currentMarble = $marbles.AddAfter($currentMarble.Next, $marbleValue)
             }
         }
         
         if ($marbleValue -eq $points)
+        {
+            $lastMarble = $marbleValue
+            $highScorePart1 = $players | Sort-Object Score -Descending | Select-Object -ExpandProperty Score -First 1
+        }
+
+        if ($marbleValue -eq ($lastMarble * 100))
         {
             $gameRunning = $false
             break
@@ -96,5 +81,8 @@ while ($gameRunning)
     }
 }
 
-# part 1
+# part 1 - 367634
+$highScorePart1
+
+# part 2 - 3020072891
 $players | Sort-Object Score -Descending | Select-Object -ExpandProperty Score -First 1
