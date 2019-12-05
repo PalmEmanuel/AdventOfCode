@@ -1,98 +1,51 @@
-function Save-CurrentPosition {
-    [CmdletBinding()]
-    param(
-        [int]$WireIndex,
-        [int]$OldX,
-        [int]$OldY,
-        [int]$NewX,
-        [int]$NewY,
-        [string]$Direction,
-        [int]$PositionDistance,
-        [int]$Distance
-    )
+# Add drawing namespace for point struct
+Add-Type -AssemblyName System.Drawing
 
-    [void]$Script:WirePositions[$WireIndex].Add([PSCustomObject]@{
-            TotalDistance = $PositionDistance + $Distance
-            Distance      = $Distance
-            Direction     = $Direction
-            OldX          = $OldX
-            OldY          = $OldY
-            NewX          = $NewX
-            NewY          = $NewY
-        }
-    )
-}
+$PuzzleInput = Get-Content '.\2019\Day 3\input.txt'
 
-$PuzzleInput = Get-Content .\input.txt
-
-# Create a list of lists for each wire to store positions
-$Script:WirePositions = New-Object System.Collections.ArrayList
-$PuzzleInput | ForEach-Object { [void]$Script:WirePositions.Add((New-Object System.Collections.ArrayList)) }
+# Create a list of dictionaries for each wire to store positions
+$Script:Wires = New-Object System.Collections.Generic.List["System.Collections.Generic.Dictionary[System.Drawing.Point,int]"]
+# Add dictionaries of <point,int> to list
+$PuzzleInput | ForEach-Object { $Script:Wires.Add((New-Object "System.Collections.Generic.Dictionary[System.Drawing.Point,int]")) }
 
 # For each wire
 for ($i = 0; $i -lt $PuzzleInput.Count; $i++) {
-    $Turns = $PuzzleInput[$i] -split ','
+    $Instructions = $PuzzleInput[$i] -split ','
 
     $x = 0
     $y = 0
-    $TotalDistance = 0
+    $Steps = 0
 
-    # For each position change
-    foreach ($Turn in $Turns) {
-        $Direction = $Turn[0]
-        [int]$Distance = $Turn.Substring(1)
-        $TotalDistance += $Distance
+    # For each instruction
+    foreach ($Instruction in $Instructions) {
+        $Direction = $Instruction[0]
+        [int]$Distance = $Instruction.Substring(1)
 
-        $OldX = $x
-        $OldY = $y
-
-        # Change current position based on direction
-        switch ($Direction) {
-            U { $y += $Distance }
-            D { $y -= $Distance }
-            L { $x -= $Distance }
-            R { $x += $Distance }
-        }
-
-        # Save current position
-        Save-CurrentPosition -WireIndex $i -OldX $OldX -OldY $OldY -NewX $x -NewY $y -Direction $Direction -Distance $Distance -PositionDistance $TotalDistance
-    }
-}
-
-# See if the wires cross anywhere
-# Start at 1 and compare with the previous wire's positions
-$CrossPositions = New-Object System.Collections.ArrayList
-for ($i = 1; $i -lt $Script:WirePositions.Count; $i++) {
-    foreach ($PosB in $Script:WirePositions[$i]) {
-        foreach ($PosA in $Script:WirePositions[$i - 1]) {
-            
-            $IntersectionX = $false
-            $IntersectionY = $false
-
-            # Find if X of wire 1 is within range of X position of wire 2
-            if (($PosB.NewX -ge $PosA.OldX -and $PosB.NewX -le $PosA.NewX) -or ($PosB.NewX -ge $PosA.NewX -and $PosB.NewX -le $PosA.OldX)) {
-                $IntersectionX = $true
+        # Move distance step by step
+        for ($j = 0; $j -lt $Distance; $j++) {
+            # Change current position based on direction
+            switch ($Direction) {
+                U { $y++ }
+                D { $y-- }
+                L { $x-- }
+                R { $x++ }
             }
 
-            # Find if Y of wire 2 is within range of Y position of wire 1
-            if (($PosA.NewY -ge $PosB.OldY -and $PosA.NewY -le $PosB.NewY) -or ($PosA.NewY -ge $PosB.NewY -and $PosA.NewY -le $PosB.OldY)) {
-                $IntersectionY = $true
+            # Store current step, throws if already exists
+            try {
+                $Script:Wires[$i].Add([System.Drawing.Point]::new($x, $y), ++$Steps)
             }
-            
-            # Exclude center cross position
-            if ($IntersectionX -and $IntersectionY -and !($PosB.NewX -eq 0 -and $PosA.NewY -eq 0)) {
-                [void]$CrossPositions.Add(
-                    [PSCustomObject]@{
-                        x             = $PosB.NewX
-                        y             = $PosA.NewY
-                        TotalDistance = $PosB.TotalDistance + $PosA.TotalDistance
-                    }
-                )
-                $CrossPositions[$CrossPositions.Count - 1]
-            }
+            catch { }
         }
     }
 }
 
-# Part one: 870
-"Part one: $(($CrossPositions | ForEach-Object { [math]::Abs($_.x) + [math]::Abs($_.y) } | Sort-Object)[0])"
+$Intersections = [System.Linq.Enumerable]::Intersect($Script:Wires[0].Keys,$Script:Wires[1].Keys)
+
+$Distances = New-Object "System.Collections.Generic.List[int]"
+foreach ($Intersection in $Intersections) {
+    $Distances.Add($Script:Wires[0][$Intersection] + $Script:Wires[1][$Intersection])
+}
+
+"Part one: $(($Intersections | ForEach-Object { [math]::Abs($_.x) + [math]::Abs($_.y) } | Sort-Object)[0])"
+"Part two: $(($Distances | Sort-Object)[0])"

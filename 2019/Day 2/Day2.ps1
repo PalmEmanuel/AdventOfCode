@@ -1,4 +1,4 @@
-$PuzzleInput = (Get-Content .\input.txt) -split ',' | ForEach-Object { [int]$_ }
+$PuzzleInput = (Get-Content '.\2019\Day 2\input.txt') -split ',' | ForEach-Object { [int]$_ }
 
 function Get-IntcodeOutput {
     [CmdletBinding()]

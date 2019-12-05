@@ -1,4 +1,4 @@
-$PuzzleInput = Get-Content .\input.txt
+$PuzzleInput = Get-Content '.\2019\Day 1\input.txt'
 
 # Part one
 $TotalFuel = ($PuzzleInput | ForEach-Object { [math]::Floor(([int]$_)/3)-2 } | Measure-Object -Sum).Sum
