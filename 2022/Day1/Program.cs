@@ -1,7 +1,4 @@
-﻿// See https://aka.ms/new-console-template for more information
-Console.WriteLine("Hello, World!");
-
-var input = File.ReadAllLines(".\\..\\..\\..\\input.txt");
+﻿var input = File.ReadAllLines(".\\..\\..\\..\\input.txt");
 
 List<Elf> elfList = new List<Elf>();
 elfList.Add(new Elf());
