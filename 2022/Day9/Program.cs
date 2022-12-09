@@ -103,22 +103,11 @@ class Program
             // See if we need to move diagonally
             if (tail.X != head.X && tail.Y != head.Y)
             {
-                if (head.X > tail.X)
-                {
-                    tail.X++;
-                }
-                else
-                {
-                    tail.X--;
-                }
-                if (head.Y > tail.Y)
-                {
-                    tail.Y++;
-                }
-                else
-                {
-                    tail.Y--;
-                }
+                // Move diagonally in approriate direction
+                if (head.X > tail.X) { tail.X++; }
+                else { tail.X--; }
+                if (head.Y > tail.Y) { tail.Y++; }
+                else { tail.Y--; }
             }
             else
             {
