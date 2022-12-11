@@ -46,6 +46,43 @@ while (cycleCountDown > 0)
 // Part 1
 Console.WriteLine(signalStrengths.Values.Sum());
 
+// Part 2
+x = 1;
+currentInstructionIndex = 0;
+cycleCountDown = instructions[currentInstructionIndex].CycleCost;
+for (int i = 0; i < 240; i++)
+{
+    int rowPosition = i % 40;
+    cycleCountDown--;
+
+    string symbol = ".";
+    if (x >= rowPosition - 1 && x <= rowPosition + 1)
+    {
+        symbol = "#";
+    }
+    if (rowPosition == 39)
+    {
+        Console.WriteLine(symbol);
+    }
+    else
+    {
+        Console.Write(symbol);
+    }
+
+    // If we spent cycles for instruction, process it
+    if (cycleCountDown == 0)
+    {
+        x += instructions[currentInstructionIndex].Value;
+
+        // Then go to the next instruction if any
+        currentInstructionIndex++;
+        if (currentInstructionIndex < instructions.Count())
+        {
+            cycleCountDown = instructions[currentInstructionIndex].CycleCost;
+        }
+    }
+}
+
 int GetSignalStrength(int cycle, int x)
 {
     return x * cycle;
