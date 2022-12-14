@@ -119,10 +119,6 @@ class Program
 	    return possibleTiles.Where(t => t.Height <= currentTile.Height + 1).ToList();
     }
 
-    public static void InitializeMap(List<List<Tile>> map)
-    {
-    }
-
     public static List<List<Tile>> ParseMap(string path)
     {
         using StreamReader sr = new StreamReader(path);
