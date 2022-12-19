@@ -92,21 +92,16 @@ class Program
     {
         HashSet<string> explored = new();
 
-        // Until we've found the shortest path
         while (currentValve != null && explored.Count < valves.Count)
         {
             explored.Add(currentValve.Id);
 
-            // Get the current valve to explore, and ordered by shortest relative distance
             var distance = currentValve.DistanceTo[toValve] + 1;
 
-            // If we didn't find the right valve, mark valve as explored
             explored.Add(currentValve.Id);
 
-            // For each tunnel from current valve
             foreach (var valveString in currentValve.TunnelsTo)
             {
-                // If we didn't already explore it
                 if (!explored.Contains(valveString))
                 {
                     var tunnelValve = valves[valveString];
