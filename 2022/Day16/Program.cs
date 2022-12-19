@@ -4,55 +4,68 @@ class Program
 {
     static async Task Main()
     {
-        var valves = await ParseValves(".\\..\\..\\..\\test.txt");
+        var valves = await ParseValves(".\\..\\..\\..\\input.txt");
+        var start = valves.First(v => v.Id == "AA");
+        var valvesWithPressure = valves.Where(v => v.FlowRate > 0).Select(v => (v.Id, v.FlowRate)).ToArray();
         // Part 1
-        Console.WriteLine(OpenValves(valves));
+        Console.WriteLine(GetPressure(30, valves.Where(v => v.FlowRate > 0), start));
+        // Part 2
+        Console.WriteLine(GetPressureWithElephant(new int[] { 26, 26 }, valvesWithPressure, new string[] { "AA", "AA" }, valves));
     }
 
-    static int OpenValves(List<Valve> valves)
+    static int GetPressure(int minutesLeft, IEnumerable<Valve> valvesToEvaulate, Valve currentValve)
     {
-        var openedValves = new List<Valve>();
-        var valvesBeingEvaluated = valves.Where(v => v.FlowRate > 0).ToList();
-
-        // Create list of valves with flow rate to explore, ordered by distance from start
-        int totalPressure = 0;
-        var currentValve = valves.First();
-        for (int minutesLeft = 30; minutesLeft > 0; minutesLeft--)
+        int pressure = 0;
+        // For every valve that has a higher flow rate than 0 (and has not been opened, because recursion)
+        foreach (var valve in valvesToEvaulate)
         {
-            currentValve = valvesBeingEvaluated.OrderByDescending(v => v.GetRemainingPressure(minutesLeft - v.DistanceTo[currentValve.Id])).FirstOrDefault();
-
-            if (currentValve is not null)
+            // Get the amount of time left after moving to and opening the valve
+            int currentMinutesLeft = minutesLeft - currentValve.DistanceTo[valve.Id] - 1;
+            // If we haven't gone "overtime"
+            if (currentMinutesLeft > 0)
             {
-                valvesBeingEvaluated.Remove(currentValve);
-
-                // Get highest pressure valve possible to reach within the time left, which we haven't opened yet
-                var nextValve = valvesBeingEvaluated
-                    .Where(v => v.DistanceTo[currentValve.Id] < minutesLeft && !openedValves.Any(o => o.Id == v.Id))
-                    .OrderByDescending(v => v.GetRemainingPressure(minutesLeft))
-                    .FirstOrDefault();
-                if (nextValve is not null)
-                {
-                    // Move to next valve
-                    var distance = nextValve.DistanceTo[currentValve.Id];
-                    minutesLeft -= distance;
-                    // for each minute that passes during travel, add pressure of opened valves
-                    Enumerable.Range(1, distance).ToList().ForEach(i => openedValves.ForEach(v => totalPressure += v.FlowRate));
-                    openedValves.Add(nextValve);
-                }
-                else
-                {
-                    // let the minute pass and increase pressure by flow rate of open valves
-                    openedValves.ForEach(v => totalPressure += v.FlowRate);
-                }
-            }
-            else
-            {
-                // let the minute pass and increase pressure by flow rate of open valves
-                openedValves.ForEach(v => totalPressure += v.FlowRate);
+                // Recurse down again, saving it as an openedValve
+                var pressureValvePath = GetPressure(currentMinutesLeft, valvesToEvaulate.Where(v => v.Id != valve.Id), valve);
+                var currentPressure = currentMinutesLeft * valve.FlowRate + pressureValvePath;
+                // If the result of the subpath is higher than the previous ones we've found, set the optimal pressure path to this one instead
+                if (currentPressure > pressure)
+                    pressure = currentPressure;
             }
         }
 
-        return totalPressure;
+        return pressure;
+    }
+
+    static int GetPressureWithElephant(int[] minutesLeft, (string id, int flowRate)[] valvesWithPressure, string[] currentValves, List<Valve> valves)
+    {
+        // Track minutes separately, like a turn-based thing
+        // Check if person already acted (by moving and opening, ie spending minutes)
+        // This enables alternating between the person and elephant
+        // Set actor to 0 or 1 based on relation between minutes left
+        int actor = minutesLeft[0] > minutesLeft[1] ? 0 : 1;
+        int pressure = 0;
+        var currentValve = valves.First(v => v.Id == currentValves[actor]);
+        foreach (var valve in valvesWithPressure)
+        {
+            // Person is index 0, elephant is 1
+            // Get the minutes left of current actor, minus the distance to travel and the minute to open the valve
+            int currentMinutesLeft = minutesLeft[actor] - currentValve.DistanceTo[valve.id] - 1;
+            // If there's time left, try another valve
+            if (currentMinutesLeft > 0)
+            {
+                // Set up new minutes and valve pairs, the second element is the current one for the other actor
+                var newMinutesLeft = new int[] { currentMinutesLeft, minutesLeft[1 - actor] };
+                var newValves = new string[] { valve.id, currentValves[1 - actor] };
+                var potentialPressure = GetPressureWithElephant(newMinutesLeft, valvesWithPressure.Where(v => v.id != valve.id).ToArray(), newValves, valves);
+                int currentPressure = currentMinutesLeft * valve.flowRate + potentialPressure;
+                if (currentPressure > pressure)
+                {
+                    pressure = currentPressure;
+                }
+            }
+        }
+
+        return pressure;
     }
 
     static async Task<List<Valve>> ParseValves(string path)
