@@ -10,7 +10,7 @@ import (
 )
 
 type Range struct {
-	srcStart, destStart, length int64
+	SourceStart, DestinationStart, Length int64
 }
 
 type Seed struct {
@@ -24,15 +24,13 @@ type Seed struct {
 	Location    int64
 }
 
-type Map map[int64]int64
-
-var seedToSoil []Map
-var soilToFertilizer []Map
-var fertilizerToWater []Map
-var waterToLight []Map
-var lightToTemperature []Map
-var temperatureToHumidity []Map
-var humidityToLocation []Map
+var seedToSoil []Range
+var soilToFertilizer []Range
+var fertilizerToWater []Range
+var waterToLight []Range
+var lightToTemperature []Range
+var temperatureToHumidity []Range
+var humidityToLocation []Range
 
 func main() {
 	file, err := os.Open(os.Args[1])
@@ -84,7 +82,7 @@ func parseAlmanac(scanner *bufio.Scanner) ([]Seed, error) {
 	// }
 
 	// Initialize the slice of transformation maps
-	maps := make([]Map, 7)
+	maps := make([][]Range, 7)
 
 	// Populate the transformation maps
 	for i := 0; i < len(maps); i++ {
@@ -148,16 +146,18 @@ func parseSeeds(scanner *bufio.Scanner) ([]Seed, error) {
 	return seeds, nil
 }
 
-func findDestination(source int64, m Map) int64 {
-	if destination, ok := m[source]; ok {
-		return destination
+func findDestination(source int64, ranges []Range) int64 {
+	for _, r := range ranges {
+		if source >= r.SourceStart && source < r.SourceStart+r.Length {
+			return r.DestinationStart + (source - r.SourceStart)
+		}
 	}
 	// If no matching source is found, return the source number
 	return source
 }
 
-func populateMap(scanner *bufio.Scanner) Map {
-	m := make(Map)
+func populateMap(scanner *bufio.Scanner) []Range {
+	m := make([]Range, 0)
 
 	// Read the lines of the current block
 	for scanner.Scan() {
@@ -179,16 +179,13 @@ func populateMap(scanner *bufio.Scanner) Map {
 		srcStart, _ := strconv.ParseInt(parts[1], 10, 64)
 		length, _ := strconv.ParseInt(parts[2], 10, 64)
 
-		// Populate the map with source and destination numbers
-		for i := int64(0); i < length; i++ {
-			m[srcStart+i] = destStart + i
-		}
+		m = append(m, Range{SourceStart: srcStart, DestinationStart: destStart, Length: length})
 	}
 
 	return m
 }
 
-func printMaps(maps []Map) {
+func printMaps(maps [][]Range) {
 	// print maps
 	for i, m := range maps {
 		fmt.Printf("Map %d:\n", i+1)
